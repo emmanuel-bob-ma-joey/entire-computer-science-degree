@@ -1,0 +1,8 @@
+{
+  "label": "Database Systems",
+  "position": 1,
+  "link": {
+    "type": "generated-index",
+    "description": "This course is intended to give students a solid background in relational DBMS. Furthermore, it outlines non-relational solutions. If you are interested in becoming an effective user of a DBMS, or a DBMS professional, this is a good introduction to the topic. The course has three main parts: the first part explains how to use a relational DBMS, the second part looks at how a relational DBMS works internally . A third, shorter part, looks at other data models."
+  }
+}
