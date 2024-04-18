@@ -6,11 +6,11 @@ sidebar_position: 5
 
 Memory of a computer system can be arranged into primary, secondary and tertiary storage. The I/O time is the time taken to read or write data from/to memory, and it is the most dominant factor in execution time. Primary storage which consists of the cache and main memory, is the fastest storage medium. Secondary storage such as magnetic disks is slower than primary storage, but it is more durable and cheaper than primary storage. Tertiary storage such as optical disks and tapes is the slowest and cheapest storage medium. In large database systems where the amount of data is too large to store in main memory in its entirety, data is stored on tapes and disks, with the database system retrieving data from the lower levels as needed into main memory.
 
-![Compute System Storage Hierarchy](../img/Database-Systems/StorageHierarchy.png)
+![Compute System Storage Hierarchy](../img/Database-Systems/BufferManagement/StorageHierarchy.png)
 
 Another reason asides from cost for the use of secondary and tertiary storage, is that data must be maintained across program execution, and in the event of a shutdown or crash, the storage device should retain data, i.e. be non-volatile. primary storage is usually volatile while secondary and tertiary storage is non-volatile.
 
-![Compute System Storage Volatility](../img/Database-Systems/storageHierarchyVolatility.png)
+![Compute System Storage Volatility](../img/Database-Systems/BufferManagement/storageHierarchyVolatility.png)
 
 ## Magnetic disks
 
@@ -23,9 +23,9 @@ Magnetic disks are widely used in for database applications as they are relative
 - **Sector**: The sector is the smallest unit of data storage. It is divided into **blocks**.
 - **Block**: The block is the smallest unit of data storage.
 
-![Magnetic Disk Diagram](../img/Database-Systems/DiskStructure.png)
+![Magnetic Disk Diagram](../img/Database-Systems/BufferManagement/DiskStructure.png)
 _Magnetic Disk Diagram_
-![Magnetic Disk Top View](../img/Database-Systems/DiskTopView.png)
+![Magnetic Disk Top View](../img/Database-Systems/BufferManagement/DiskTopView.png)
 _Magnetic Disk Top View_
 
 While disk heads are arranged in a row with one for each recording surface, modern memory systems only allow for one disk head to read/write at a time. The reason being it is very difficult to ensure that each head is perfectly aligned on their corresponding track. Unlike main memory where accessing data from any location takes about the same amount of time, the time to access a block of memory is not constant and relies on multiple factors:
@@ -45,7 +45,7 @@ $$
 - **Buffer pool**: a collection of page frames allocated to temporarily hold pages of data from disk.
 
 The aptly named buffer manager is the layer of software responsible for managing the buffer pool. Software in the upper layers of the DBMS simply need to ask the buffer manager for a specific page, and the buffer manager will handle checking the buffer pool and bringing the page from disk into one of the frames if it is not already there.
-![Buffer Manager](../img/Database-Systems/BufferManager.png)
+![Buffer Manager](../img/Database-Systems/BufferManagement/BufferManager.png)
 
 Upper layer software also needs to let the buffer manager know when a page is no longer needed, so that the buffer manager can free the page frame, as well as if the page frame is dirty (i.e. the page has been modified) so that the buffer manager can propogate the changes to the disk.
 
@@ -65,7 +65,7 @@ Whether a record is fixed-length or variable-length is determined by its field t
 - Fixed-length: fields have predetermined size - e.g INTEGER | FLOAT | CHAR
 - variable-length: fields can vary in size - e.g. VARCHAR | BLOB
 
-![Fixed Length Record](../img/Database-Systems/FixedLengthRecord.png)
+![Fixed Length Record](../img/Database-Systems/BufferManagement/FixedLengthRecord.png)
 
 Higher levels of DBMS software do not interact with memory pages but rather store data in the familiar form of records or rows. We can then think of a memory page as a collection of slots, each of which can hold a record. An individual record can be identified by the tuple $(PageId, SlotNumber)$.
 
@@ -83,7 +83,7 @@ The issue however is that there may be external references to the record that is
 
 For the case of managing variable-length records, some space at the beginning of each record is reserved to store an array of integer offsets, where the $i$th integer in the array denotes the address offset of the $i$th field, with an additional entry to denote the end of the last field. In the case when a field is null, the start of the next field/end of the current field is pointed to the start of the current field - i.e. no memory space is reserved for a null value.
 
-![Variable Length Record](../img/Database-Systems/VariableLengthRecord.png)
+![Variable Length Record](../img/Database-Systems/BufferManagement/VariableLengthRecord.png)
 
 In the case of managing records of variable lengths, it is very useful to be able to move records on a page with the goal of ensuring all records are contiguous, followed by any leftover free space. To enable this we can maintain a directory of slots for each page, with each slot being identified by the tuple $(recordOffset, recordLength)$ where:
 
