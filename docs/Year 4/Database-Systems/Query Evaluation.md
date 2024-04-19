@@ -8,6 +8,8 @@ The processing of an SQL query is delegated to 3 programs:
 - **Query Optimizer**: determines the most efficient way to execute the query, i.e. determines an efficient execution plan
 - **Plan Executor**: executes the plan and returns the result to the user
 
+![Query Execution Diagram](../img/Database-Systems/QueryEvaluation/SQLQuery.gif)
+
 Queries are composed of a few **basic operators**:
 
 - **Selection**: filters the tuples based on a condition
@@ -101,4 +103,168 @@ Execution Options:
 
 ### Clustered Index tree
 
-### Non-clustered Index tree
+![Clustered B+ Index Tree](../img/Database-Systems/QueryEvaluation/ClusteredB+.png)
+
+Step 1. Go from the root to the left-most leaf _lq_ with qualifying data entry.
+
+- cost = one I/O to retrieve _lq_ page
+
+Step 2. retrieve page of first qualifuing tuple within _lq_ leaf.
+
+- cost = one I/O
+
+Step 3. keep moving to adjacent leaves as long as search criteria is fulfilled. Each move to an adjacent leaf is an additional I/O
+
+- Since clustered, each data page is only retrieved once.
+- cost = proportion of tuples that match is roughly equal to proprtion of data pages that match - if ~20% of tuples qualify then ~ 20% of data pages are retrieved.
+
+<mark>Example</mark>
+
+```SQL
+SELECT * FROM Users WHERE uid = 123
+```
+
+Since uid is the primary key, only one tuple will match, thus I/O cost = cost of step 1. = retrieve _lq_ page + retrieve corresponding data page = 2
+
+<mark>Example</mark>
+
+```SQL
+SELECT * FROM Users WHERE uname = "John"
+```
+
+Let's assume there are 100 matching tuples for the query. Since we know for users there are around 80 tuples/page, the matching tuples will be spread across 2 pages. Therefore the I/O cost will be _lq_ + 2 data pages = 3
+
+<mark>Example</mark>
+
+```SQL
+SELECT * FROM Users WHERE uname < 'G'
+```
+
+Let's assume there are 10000 matching tuples for the query. That means 25% of the tuples are a match, which means we will need to access roughly 25% of the memory pages. Therefore the I/O cost will be _lq_ + 125 data pages = 126
+
+_Note: some systems might retrieve all rids through the index (not efficient). – In this case, example 3 will read approx. 25% of the leaf pages._
+
+### Non-clustered Index tree: standard strategy
+
+![Non-Clustered B+](../img/Database-Systems/QueryEvaluation/nonClusteredB+.png)
+
+Step 1. Go from the root to the left-most leaf _lq_ with qualifying data entry.
+
+- cost = one I/O to retrieve _lq_ page
+
+Step 2. retrieve page of first qualifuing tuple within _lq_ leaf.
+
+- cost = one I/O
+
+Step 3. keep moving to adjacent leaves as long as search criteria is fulfilled. Each move to an adjacent leaf is an additional I/O
+
+- Since non-clustered, each new tuple might be in a different memory page.
+- cost = no correlation between page I/O cost and number of tuples retrieved. worst case scenario is need to do a new page I/O per tuple.
+
+Non-clustered Index usually only useful with very small reduction factors
+
+### Non-clustered index: Sorting strategy
+
+1. Determine all leaf pages that have matching entries
+2. sort the matching data entries by their page-id
+3. Retrieve each memory page only once and get all matching tuples
+
+The advantage is that the worst case scenario is upper bounded by # of data pages + # of leaf pages. We will never need to make an I/O multiple times for one memory page since the entries are sorted by their page-id. Thus depending on how the tuples are distributed among the memory pages, it is possible to be more efficient than a simple scan.
+
+### Selection on 2 or more attributes
+
+Let's say we are making a selection query for all tuples whose attribute A =100 and attribute B = 50, and our relation has 500 pages.
+
+Option 1. No index
+
+- simple scan: 500 pages, 1 I/O for each page -> 500 I/Os
+
+Option 2. Index on A
+
+- get all the tuples where A=100 through the index, and then check their B value
+- cost = cost to query for A=100
+
+Option 3. Create 2 indexes; one for each attribute
+
+- 1. get all the tuples where A=100 through the A index,
+- 2. get all the tuples where B=50 through the B index
+- 3. build and return an intersection of all the tuples
+- cost = cost to query for A=100 + cost to query for B=50
+
+**Now lets consider a selection query for A=100 OR B=50**
+
+Option 1. No index
+
+- simple scan: 500 pages, 1 I/O for each page -> 500 I/Os
+
+Option 2. Index on A
+
+- Not useful, since it is an OR condition
+
+Option 3. Create 2 indexes; one for each attribute
+
+1. get all the tuples where A=100 through the A index
+2. get all the tuples where B=50 through the B index
+3. Build and return the union of the tuples
+
+- cost = cost to query for A=100 + cost to query for B=50
+
+**Main memory usage note**
+
+- A scan over a relation only needs two main memory frames: 1 for output, 1 for input
+- Index tree additionally needs to hold root and intermediate pages, and space to retrieve one leaf page at a time
+- Index tree with sorting/intersection additionally needs to hold root and intermediate pages, as well as necessary leaf pages for sorting/intersection.
+
+## Projection
+
+```SQL
+SELECT uid, experience
+FROM Users
+```
+
+projection is often used together with other operators in one query
+
+```SQL
+SELECT uid, experience
+FROM Users
+WHERE experience > 5
+```
+
+For projection, decide how to do the other operations first, and then do the projection on the fly.
+
+## External Sorting
+
+![External Sorting Example](../img/Database-Systems/QueryEvaluation/ExternalSorting.png)
+
+Say we would like to sort 5 pages of data, each with two tuples, and we only have 3 buffer frames available to us. The way we can do this is:
+
+1. Load 3 pages into the buffer frames
+2. Sort the tuples in the buffer frames
+3. Write the sorted tuples to disk (this is one run)
+4. Repeat steps 1-3 for the remaining pages (this is one pass)
+
+The cost = 1 I/O per page to load into the buffer frames, and 1 I/O per page to write to disk = 2(# of pages) for pass 0
+
+![External Sort runs](../img/Database-Systems/QueryEvaluation/ExternalSortRuns.png)
+
+Once we have each run sorted, we can merge them together to get the final sorted result. This can be done with just a linear merge, comparing the smallest elements between the runs and picking the smallest each time.
+
+The cost = 1 I/O per page to merge the runs, and typically the output is given directly to the client so there is no additional write I/O, i.e. cost = (# of pages) for Pass 1
+
+The general I/O cost is given by the formula
+
+$$
+(2N-1)(N)
+$$
+
+Where $N$ is the number of pages.
+
+![External Sort merge](../img/Database-Systems/QueryEvaluation/externalSortMerge.png)
+
+Sometimes, a second pass is needed if pass 0 creats more runs than there are main memory buffers. A general solution to calculate # of passes needed is:
+
+$$
+1 + \left\lceil \log_{B-1} \left(\frac{N}{B}\right) \right\rceil
+$$
+
+where $N$ is the number of pages, and $B$ is the number of buffer frame.
