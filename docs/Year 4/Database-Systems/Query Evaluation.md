@@ -261,10 +261,70 @@ Where $N$ is the number of pages.
 
 ![External Sort merge](../img/Database-Systems/QueryEvaluation/externalSortMerge.png)
 
-Sometimes, a second pass is needed if pass 0 creats more runs than there are main memory buffers. A general solution to calculate # of passes needed is:
+Sometimes, a second pass is needed if pass 0 creates more runs than there are main memory buffers. A general solution to calculate # of passes needed is:
 
 $$
 1 + \left\lceil \log_{B-1} \left(\frac{N}{B}\right) \right\rceil
 $$
 
 where $N$ is the number of pages, and $B$ is the number of buffer frame.
+
+## Joins
+
+```SQL
+SELECT *
+FROM Users U, GroupMembers GM
+WHERE U.uid = GM.uid
+```
+
+_Note: Users U is the **outer relation** and GroupMembers GM is the **inner relation**_
+
+Cardinality of Users ⋈ GroupMembers = |GroupMembers|
+
+- Join attribute is primary key for Users, and foreign key in GroupMember, so each GM tuple will match with exactly one User tuple
+
+Cardinality of Users ✕ GroupMembers = |Users| \* |GroupMembers|
+
+- Cross product is always the product of individual relation sizes
+
+Below detail the many ways of executing a join
+
+### Simple Nested Loop Join
+
+For each tuple in the outer relation, we scan each tuple in the inner relation.
+
+```
+foreach tuple u in U do
+    foreach tuple gm in GM do
+        if u.uid = gm.uid then
+            add <u, gm> to result
+```
+
+I/O cost = |OuterPages| + |OuterRelation|\*|InnerPages| = 500 + 40,000(1,000)
+
+- |OuterPages| comes from the cost of scanning each tuple in Users which is the # of pages in Users.
+- |OuterRelation|\*|InnerPages| comes from the cost of scanning each tuple in GroupMembers which is |InnerPages| and we do this for each tuple in Users, so we multiply by |OuterRelation|
+
+### Page Nested Loop Join
+
+For each page $P_u$ of Users U, get each page $P_g$ of GroupMembers GM and output \<u,g\> where u is in $P_u$ and g is in $P_g$
+
+```
+foreach page pu of Users U
+    foreach page pg of GroupMembers GM
+        foreach tuple u in pu do
+            foreach tuple g in pg do
+                if u.uid = g.uid then
+                        add <u,g> to result
+```
+
+I/O cost = |OuterPages| + |OuterPages|\*|InnerPages| = 500 + 500(1000) = 500,500
+
+- |OuterPages| - cost of scanning each page in Users
+- |OuterPages|\*|InnerPages| - cost of scanning each page in GroupMembers is |InnerPages|, and we do this for each page in Users, so we multiply by |OuterPages|
+
+Notice that for simple nested loop join and page nested loop join, we only need 3 memory frames; 1 for a page of U, 1 for a page of GM, and 1 for the result.
+
+### Block Nested Loop Join
+
+For each block of pages $bp_u$ of Users U, get each page $P_g$ of GroupMembers GM, and write out matching pairs \<u,g\>

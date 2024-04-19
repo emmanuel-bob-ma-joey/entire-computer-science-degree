@@ -6,11 +6,11 @@ import rehypeKatex from "rehype-katex";
 
 const config: Config = {
   title: "A collection of notes for your computer science degree",
-  tagline: "Something to ease the pain",
+  tagline: "Because we all know you're behind on lectures",
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
-  url: "https://your-docusaurus-site.example.com",
+  url: "https://cs-pocketbook.com",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: "/",
@@ -18,7 +18,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: "facebook", // Usually your GitHub org/user name.
-  projectName: "docusaurus", // Usually your repo name.
+  projectName: "cs-pocketbook", // Usually your repo name.
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -39,6 +39,7 @@ const config: Config = {
           sidebarPath: "./sidebars.ts",
           remarkPlugins: [remarkMath],
           rehypePlugins: [rehypeKatex],
+          showLastUpdateTime: true,
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
@@ -54,6 +55,13 @@ const config: Config = {
         theme: {
           customCss: "./src/css/custom.css",
         },
+        // sitemap: {
+        //   lastmod: "date",
+        //   changefreq: "weekly",
+        //   priority: 0.5,
+        //   ignorePatterns: ["/tags/**"],
+        //   filename: "sitemap.xml",
+        // },
       } satisfies Preset.Options,
     ],
   ],
@@ -63,9 +71,9 @@ const config: Config = {
     // Replace with your project's social card
     image: "img/docusaurus-social-card.jpg",
     navbar: {
-      title: "My Site",
+      title: "CS PocketBook",
       logo: {
-        alt: "My Site Logo",
+        alt: "CS BocketBook Logo",
         src: "img/logo.svg",
       },
       items: [
@@ -126,7 +134,7 @@ const config: Config = {
         //   ],
         // },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Emmanuel Bob Ma Joey, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Emmanuel Bob Ma Joey`,
     },
     prism: {
       theme: prismThemes.github,
@@ -141,6 +149,15 @@ const config: Config = {
         "sha384-odtC+0UGzzFL/6PNoE8rX/SPcQDXBJ+uRepguP4QkPCm2LBxH3FA3y+fKSiJ+AmM",
       crossorigin: "anonymous",
     },
+  ],
+  plugins: [
+    [
+      "vercel-analytics",
+      {
+        debug: true,
+        mode: "auto",
+      },
+    ],
   ],
 };
 
