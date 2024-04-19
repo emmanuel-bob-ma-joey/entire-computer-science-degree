@@ -245,7 +245,7 @@ Say we would like to sort 5 pages of data, each with two tuples, and we only hav
 
 The cost = 1 I/O per page to load into the buffer frames, and 1 I/O per page to write to disk = 2(# of pages) for pass 0
 
-![External Sort runs](../img/Database-Systems/QueryEvaluation/ExternalSortRuns.png)
+![External Sort runs](../img/Database-Systems/QueryEvaluation/externalSortRuns.png)
 
 Once we have each run sorted, we can merge them together to get the final sorted result. This can be done with just a linear merge, comparing the smallest elements between the runs and picking the smallest each time.
 
