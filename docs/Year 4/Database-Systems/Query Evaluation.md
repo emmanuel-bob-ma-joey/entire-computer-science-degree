@@ -254,7 +254,7 @@ The cost = 1 I/O per page to merge the runs, and typically the output is given d
 The general I/O cost is given by the formula
 
 $$
-(2N-1)(N)
+(2(NumberOfPasses)-1)(N)
 $$
 
 Where $N$ is the number of pages.
@@ -300,7 +300,11 @@ foreach tuple u in U do
             add <u, gm> to result
 ```
 
-I/O cost = |OuterPages| + |OuterRelation|\*|InnerPages| = 500 + 40,000(1,000)
+I/O cost =
+
+$$
+|\text{OuterPages}| + |\text{OuterRelation}| \times |\text{InnerPages}| = 500 + 40,000 \times 1,000
+$$
 
 - |OuterPages| comes from the cost of scanning each tuple in Users which is the # of pages in Users.
 - |OuterRelation|\*|InnerPages| comes from the cost of scanning each tuple in GroupMembers which is |InnerPages| and we do this for each tuple in Users, so we multiply by |OuterRelation|
@@ -318,7 +322,14 @@ foreach page pu of Users U
                         add <u,g> to result
 ```
 
-I/O cost = |OuterPages| + |OuterPages|\*|InnerPages| = 500 + 500(1000) = 500,500
+I/O cost =
+
+$$
+
+|\text{OuterPages}| + |\text{OuterPages}| \times |\text{InnerPages}| = 500 + 500 \times 1000 = 500,500
+
+
+$$
 
 - |OuterPages| - cost of scanning each page in Users
 - |OuterPages|\*|InnerPages| - cost of scanning each page in GroupMembers is |InnerPages|, and we do this for each page in Users, so we multiply by |OuterPages|
@@ -327,4 +338,108 @@ Notice that for simple nested loop join and page nested loop join, we only need 
 
 ### Block Nested Loop Join
 
-For each block of pages $bp_u$ of Users U, get each page $P_g$ of GroupMembers GM, and write out matching pairs \<u,g\>
+For each block of pages $bp_u$ of Users U, get each page $P_g$ of GroupMembers GM, and write out matching pairs \<u,g\> where u is in $bp_u$ and g is in $P_g$
+
+**Notes**: 1 block of pages from Users U and one page of GM must be able to fit in main memory
+
+```
+foreach block b of Users U do
+    foreach page pg of GroupMembers GM do
+        foreach tuple u in b do
+            foreach tuple g in pg do
+                if u.uid = g.uid then
+                    add <u,g> to result
+```
+
+I/O cost =
+
+$$
+
+\text{|OuterPages|} + \frac{\text{|OuterPages|}}{\text{blocksize}} \times \text{|InnerPages|}
+
+
+$$
+
+- |OuterPages| = cost of scanning each block in Users which is the # of pages in Users.
+- $ \frac{\text{|OuterPages|}}{\text{blocksize}}$ = number of blocks, and for each block we load inner pages, so we multiply by $|\text{InnerPages|}$
+
+In this case, the memory requirement is the size of a block of pages of Users U + 1 frame for the GM page + 1 output frame.
+
+Best case cost is if the entire outer relation fits in main memory, making the I/O cost = |OuterPages|+|InnerPages|
+
+### Index Nested Loops Join
+
+For each tuple in the outer relation Users U, we find the matching tuples in GroupMembers GHM through an index on the join attribute.
+
+```
+foreach tuple u in U do
+    find all matching tuples g in GM through index
+    foreach matching g in GM do
+        add <u,g> to result
+```
+
+I/O cost =
+
+$$
+|\text{OuterPages}| + |(\text{OuterRelation})| \times \text{cost of finding matching tuples in inner relation}
+$$
+
+- $|\text{OuterPages}| $ = cost of scanning each tuple in Users
+- $|(\text{OuterRelation})| \times \text{cost of finding matching tuples in inner relation}$ = cost of retrieving matching inner tuples
+
+When compared to block nested loop, index nested loop has less I/O cost if |OuterRelation| is very small.
+
+## Sort Merge Join
+
+Sort the outer relation and the inner relation by the join attribute. Then do a 2-pointer approach, doing a linear scan over the two relations and output matching tuples.
+
+```
+sort U by uid
+sort GM by uid
+
+u,g = the first tuples in U and GM
+while U or GM is not empty do
+    if u.uid = g.uid then
+        output <u,g>
+        u,g = the next tuples in U and GM
+    else if u.uid < g.uid then
+        u = the next tuple in U
+    else
+        g = the next tuple in GM
+```
+
+The cost of the merge step is simply the cost of loading the two relations, which is |UserPages|+|GroupPages|
+
+The cost of the sorting step we know using the formula from the external sort section is (2(2)-1)|UserPages| + (2(2)-1)|GroupPages| -- _we can assume it can be sorted in 2 passes_
+
+Final I/O cost = cost of sorting + cost of merge =
+
+$$
+(4-1)|\text{UserPages}| + (4-1)|\text{GroupPages}| + |\text{UserPages}|+|\text{GroupPages}| = (4)|\text{UserPages}| + (4)|\text{GroupPages}|
+$$
+
+However, we can pipeline the sorting and merging step, such that instead of needing to load the two relations into memory for the merge which would cost |UserPages|+|GroupPages|, we can somehow do the merge step in place, saving us the cost of loading the two relations into memory.
+
+Thus the final optimized I/O cost is
+
+$$
+(3)|\text{UserPages}| + (3)|\text{GroupPages}|
+$$
+
+## Distinct Projection
+
+```SQL
+SELECT DISTINCT uname
+FROM USER
+```
+
+To eliminate duplicates, we need to sort the relations by the projection attribute. This step is usually done at the very end of the query to minimize number of tuples that need to be sorted, or if the relation is already sorted for another operator. It is an expensive operation so when writing queries, only use when absolutely necessary.
+
+## Set Operations
+
+The same idea as the previously discused equality join operations.
+
+## Aggregate Operations
+
+- Without Grouping: typically requires scanning the entire relation
+- With Grouping: sort on the group-by attribute, and then scan the relation while computing the aggregate for each group.
