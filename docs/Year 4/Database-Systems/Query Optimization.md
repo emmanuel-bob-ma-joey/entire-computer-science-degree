@@ -106,7 +106,9 @@ $$
 Two types of optimization techniques:
 
 - **Cost-Based Optimization**:
-  - Execute operations in an order such that
+
+  - Calculate and compare the I/O cost of possible implementations of operators.
+
 - **Algebraic Optimization**:
 
   - Prioritize operations that eliminate a lot of tuples
@@ -141,7 +143,7 @@ where the order of operators is first join, then selection, then projection.
 
 ![Optimized Execution Tree](../img/Database-Systems/QueryOptimization/ExecutionTreeOptimized.png)
 
-Pushing projections down the execution tree wont reduce the number of tuples but it will reduce the memory size of intermediate results
+Pushing projections down the execution tree wont reduce the number of tuples but it will reduce the memory size of intermediate results as attributes are trimmed from each tuple.
 
 ````mermaid
 graph BT;
@@ -163,4 +165,11 @@ graph BT;
     style G fill:#fff,stroke:#333,stroke-width:2px, color:#000;
     style H fill:#fff,stroke:#333,stroke-width:2px, color:#000;
     style I fill:#fff,stroke:#333,stroke-width:2px, color:#000;```
+
 ````
+
+## General rules of thumb
+
+- If the application has certain kinds of queries that will be run frequently, create appropriate indexes to speed up these queries
+- If the application has many updates and inserts, be conservative with creating indexes for the relevent relations since each INSERT/UPDATE will also change the index tree.
+- ` SQL EXPLAIN` explains how a query is executed internally.
